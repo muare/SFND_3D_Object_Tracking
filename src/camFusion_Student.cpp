@@ -160,4 +160,48 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
 void matchBoundingBoxes(std::vector<cv::DMatch> &matches, std::map<int, int> &bbBestMatches, DataFrame &prevFrame, DataFrame &currFrame)
 {
     // ...
+    for(auto prevBB : prevFrame.boundingBoxes)
+    {
+        std::vector<cv::DMatch> prevMatchInBB;
+        for(auto m : matches)
+        {
+            cv::KeyPoint kp = prevFrame.keypoints.at(m.queryIdx);
+            if(prevBB.roi.contains(kp.pt))
+            {
+                prevMatchInBB.push_back(m);
+            }
+        }
+
+        std::multimap<int,int> bbKp;
+        for(auto curBB : currFrame.boundingBoxes)
+        {
+            for(auto prevM : prevMatchInBB)
+            {
+                cv::KeyPoint kp = currFrame.keypoints.at(prevM.trainIdx);
+                if(curBB.roi.contains(kp.pt))
+                {
+                    bbKp.insert(std::pair<int,int>(curBB.boxID,prevM.trainIdx));
+                }
+            }
+        } 
+
+        int max = 0;
+        int index = -1;
+
+        if(bbKp.size() > 0)
+        {
+            for(auto item : bbKp)
+            {
+                int count = bbKp.count(item.first); 
+                if( count > max)
+                {
+                    max = count;
+                    index = item.first;
+                }
+            }
+
+            bbBestMatches.insert(std::pair<int,int>(prevBB.boxID, index));
+        }
+        
+    }
 }
